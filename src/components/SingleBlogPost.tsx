@@ -1,133 +1,116 @@
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { getBlog } from '../api/api';
+import toast from 'react-hot-toast';
+import Navbar from './Navbar';
+import Footer from './Footer';
+import Loader from './Loader';
 
-import React from 'react';
-import { useParams } from 'react-router-dom'; // Assuming you are using React Router for navigation
-import { Plus } from 'lucide-react';
 
-// Mocked blog data (this could come from an API)
-const blogs = [
-  {
-    id: 1,
-    title: "The Future of AI in Web Development",
-    content: "Explore how artificial intelligence is revolutionizing the way we build and interact with websites. From AI-powered design tools to intelligent chatbots, discover the latest trends shaping the future of web development...",
-    date: "May 15, 2024",
-    author: "Alex Chen",
-    image: "/api/placeholder/800/400",
-  },
-  {
-    id: 2,
-    title: "Optimizing React Performance: A Deep Dive",
-    content: "Learn advanced techniques to boost your React application's performance. We'll cover code splitting, memoization, and the latest React features that can help you create lightning-fast user interfaces...",
-    date: "May 12, 2024",
-    author: "Sarah Johnson",
-  },
-  // More blog data
-];
+interface Blog {
+  _id?: string;
+  title: string;
+  content: string;
+  createdAt: string|Date;
+  author: string;
+  image?: string;
+  userId?: string;
+}
 
 const SingleBlogPost = () => {
-  const { id } = useParams<{ id: string }>(); // Assuming the ID is passed via URL
-  const blog = blogs.find((b) => b.id === Number(id));
+  const { id } = useParams<{ id: string }>();
+  const [blog, setBlog] = useState<Blog | null |undefined>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (!blog) {
-    return (
-      <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900">
-        <Navbar />
-        <main className="flex-grow pt-8 pb-16 lg:pt-16 lg:pb-24">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="text-3xl font-extrabold mb-6 dark:text-white">Blog Not Found</h1>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
+  useEffect(() => {
+    fetchBlog();
+  }, [id]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  const fetchBlog = async () => {
+    try {
+      setIsLoading(true);
+      const response = await getBlog(id);
+      if (response.success && response.data) {
+    
+        const blogData: Blog = {
+          _id: response.data._id,
+          title: response.data.title || '',
+          content: response.data.content || '',
+          createdAt: response.data.createdAt || new Date().toISOString(),
+          author: response.data.author || '',
+          image: response.data.image,
+          userId: response.data.userId,
+        };
+        setBlog(blogData);
+      } else {
+        toast.error('Failed to fetch the blog post.');
+      }
+    } catch (error) {
+      toast.error('An error occurred while fetching the blog post.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+  if (isLoading) {
+    return <Loader />;
   }
 
   return (
     <div className="flex flex-col min-h-screen bg-white dark:bg-gray-900">
-      {/* Navbar */}
-      <nav className="bg-white dark:bg-gray-800 shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex-shrink-0">
-              <a href="#" className="text-2xl font-bold text-gray-900 dark:text-white">DevInsight</a>
-            </div>
-            <div className="flex items-center space-x-4">
-              <a href="/" className="text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300">Home</a>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navbar/>
 
-      {/* Main Content */}
       <main className="flex-grow pt-8 pb-16 lg:pt-16 lg:pb-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <article className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow">
-            {blog.image && (
-              <div className="mb-4">
-                <img
-                  src={blog.image}
-                  alt={blog.title}
-                  className="w-full h-64 object-cover rounded-lg"
-                />
-              </div>
-            )}
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">{blog.title}</h1>
-            <div className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              <time>{blog.date}</time> • <span>{blog.author}</span>
-            </div>
-            <p className="text-lg text-gray-700 dark:text-gray-300">{blog.content}</p>
-          </article>
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+    {blog ? (<>
+       {blog  && blog.image && (
+        <div className="mb-6">
+          <img
+            src={blog.image}
+            alt={blog.title}
+            className="w-full h-64 object-cover rounded-lg"
+          />
+        </div>
+      )}
+      <h1 className="text-3xl font-bold mb-4 dark:text-white">
+        {blog.title}
+      </h1>
+      <div className="mb-8 text-gray-500 dark:text-gray-400">
+        <time>
+          {new Date(blog.createdAt).toLocaleDateString(
+            'en-US',
+            {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            }
+          )}
+        </time>{' '}
+        • <span>{blog.author}</span>
+      </div>
+      <div className="prose prose-lg max-w-none dark:prose-invert text-white">
+        {blog.content}
+      </div>
+      </>
+    ) : ( <p className="text-gray-500 dark:text-gray-400">
+      Could not get the post try again later or contact us.
+    </p>) }
+         
+      
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-100 dark:bg-gray-800 p-6 text-gray-700 dark:text-gray-400 mt-auto">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center">
-          <p className="mb-4 sm:mb-0">&copy; 2024 DevInsight. All rights reserved.</p>
-          <div className="space-x-4">
-            <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline">Privacy Policy</a>
-            <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline">Terms of Service</a>
-          </div>
-        </div>
-      </footer>
-      
-      {/* Floating Create Button */}
-      <button
-        onClick={() => console.log("Navigate to Create Blog Page")}
-        className="fixed bottom-12 right-8 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-lg transition duration-300 flex items-center justify-center"
-        aria-label="Create new blog post"
-      >
-        <Plus size={24} />
-        <span className="ml-2 hidden md:inline">Create Blog</span>
-      </button>
+      <Footer />
     </div>
   );
 };
-
-const Navbar = () => (
-  <nav className="bg-white dark:bg-gray-800 shadow">
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="flex justify-between items-center h-16">
-        <div className="flex-shrink-0">
-          <a href="#" className="text-2xl font-bold text-gray-900 dark:text-white">DevInsight</a>
-        </div>
-        <div className="flex items-center space-x-4">
-          <a href="/" className="text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300">Home</a>
-        </div>
-      </div>
-    </div>
-  </nav>
-);
-
-const Footer = () => (
-  <footer className="bg-gray-100 dark:bg-gray-800 p-6 text-gray-700 dark:text-gray-400 mt-auto">
-    <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center">
-      <p className="mb-4 sm:mb-0">&copy; 2024 DevInsight. All rights reserved.</p>
-      <div className="space-x-4">
-        <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline">Privacy Policy</a>
-        <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline">Terms of Service</a>
-      </div>
-    </div>
-  </footer>
-);
 
 export default SingleBlogPost;
