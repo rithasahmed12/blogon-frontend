@@ -1,7 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Loader2, Upload, X } from "lucide-react";
 import ModalWrapper from './ModalWrapper';
-import { useSelector } from 'react-redux';
 import { updateBlog } from '../api/api';
 import toast from 'react-hot-toast';
 
